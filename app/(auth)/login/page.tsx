@@ -1,12 +1,48 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { FieldsetCard } from "@/components/common/fieldset-card";
-import { Github, Chrome } from "lucide-react";
+import { Github, Chrome, Loader2 } from "lucide-react";
+import { userService } from "@/lib/api";
 
 export default function LoginPage() {
+    const router = useRouter();
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError(null);
+
+        try {
+            await userService.login({
+                email,
+                password,
+            });
+
+            router.push("/dashboard");
+        } catch (err: any) {
+            setError(err.response?.data?.detail || err.message || "Failed to sign in");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGithubLogin = async () => {
+        // For GitHub OAuth, we'll still need to handle it. 
+        // Usually, the backend provides a redirect URL.
+        window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/users/github/login`;
+    };
+
     return (
         <div className="w-full max-w-md space-y-12">
             {/* Logo */}
@@ -23,7 +59,12 @@ export default function LoginPage() {
             {/* Login Form */}
             <FieldsetCard legend="Sign in" dashed className="shadow-[8px_8px_0px_0px_rgba(0,0,0,0.05)]">
                 <div className="space-y-6">
-                    <form className="space-y-4">
+                    <form className="space-y-4" onSubmit={handleLogin}>
+                        {error && (
+                            <div className="p-3 border border-destructive bg-destructive/5 text-destructive text-[10px] font-bold uppercase tracking-widest">
+                                {error}
+                            </div>
+                        )}
                         <div className="space-y-2">
                             <Label htmlFor="email" className="text-[10px] font-bold uppercase tracking-widest text-black/60">Email Address</Label>
                             <Input
@@ -31,12 +72,15 @@ export default function LoginPage() {
                                 type="email"
                                 placeholder="developer@sentinel.ai"
                                 className="rounded-none border-black h-11 focus-visible:ring-0 focus-visible:border-black focus-visible:bg-black/5"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
                             />
                         </div>
 
                         <div className="space-y-2">
                             <div className="flex justify-between items-center">
-                                <Label htmlFor="password" name="password" className="text-[10px] font-bold uppercase tracking-widest text-black/60">Password</Label>
+                                <Label htmlFor="password" className="text-[10px] font-bold uppercase tracking-widest text-black/60">Password</Label>
                                 <Link href="#" className="text-[10px] font-bold uppercase tracking-widest text-black/40 hover:text-black hover:underline">Forgot?</Link>
                             </div>
                             <Input
@@ -44,11 +88,18 @@ export default function LoginPage() {
                                 type="password"
                                 placeholder="••••••••"
                                 className="rounded-none border-black h-11 focus-visible:ring-0 focus-visible:border-black focus-visible:bg-black/5"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
                             />
                         </div>
 
-                        <Button type="submit" className="w-full rounded-none h-11 bg-black text-white hover:bg-white hover:text-black border border-black transition-all duration-200 font-bold uppercase tracking-widest text-xs">
-                            Continue
+                        <Button
+                            type="submit"
+                            className="w-full rounded-none h-11 bg-black text-white hover:bg-white hover:text-black border border-black transition-all duration-200 font-bold uppercase tracking-widest text-xs"
+                            disabled={loading}
+                        >
+                            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continue"}
                         </Button>
                     </form>
 
@@ -62,7 +113,11 @@ export default function LoginPage() {
                     </div>
 
                     <div className="grid grid-cols-1 gap-3">
-                        <Button variant="outline" className="w-full rounded-none h-11 border-black hover:bg-black hover:text-white transition-all duration-200 text-[10px] font-bold uppercase tracking-widest gap-2">
+                        <Button
+                            variant="outline"
+                            className="w-full rounded-none h-11 border-black hover:bg-black hover:text-white transition-all duration-200 text-[10px] font-bold uppercase tracking-widest gap-2"
+                            onClick={handleGithubLogin}
+                        >
                             <Github className="h-4 w-4" />
                             Continue with GitHub
                         </Button>
