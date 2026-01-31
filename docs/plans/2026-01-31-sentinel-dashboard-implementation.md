@@ -10,6 +10,8 @@
 
 **Design Reference:** `docs/plans/2026-01-31-frontend-dashboard-design.md`
 
+**CRITICAL:** All UI components MUST use shadcn/ui. This includes Sidebar, Breadcrumb, Button, Card, Input, Badge, etc. No custom implementations of components that exist in shadcn/ui.
+
 ---
 
 ## Phase 1: Foundation & Design System
@@ -137,6 +139,9 @@ git commit -m "feat: configure JetBrains Mono as primary font"
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent: var(--sidebar-accent);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-ring: var(--sidebar-ring);
 
   /* Custom Sentinel colors */
   --color-accent-orange: var(--accent-orange);
@@ -191,12 +196,15 @@ git commit -m "feat: configure JetBrains Mono as primary font"
   --input: #000000;
   --ring: #000000;
 
-  /* Sidebar - Light stone */
+  /* Sidebar - Light stone (for shadcn/ui Sidebar) */
   --sidebar: #F5F5F4;
   --sidebar-foreground: #000000;
   --sidebar-border: #E7E5E4;
   --sidebar-accent: #FFFFFF;
   --sidebar-accent-foreground: #000000;
+  --sidebar-primary: #F97316;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-ring: #000000;
 
   /* Sentinel accent colors */
   --accent-orange: #F97316;
@@ -315,21 +323,71 @@ git commit -m "feat: add remaining shadcn/ui components"
 
 ---
 
-## Phase 2: Layout Components
-
-### Task 2.1: Create Sidebar Component
+### Task 1.6: Install shadcn/ui Sidebar Component
 
 **Files:**
-- Create: `components/layout/sidebar.tsx`
+- Create: `components/ui/sidebar.tsx`
+- Modify: `app/layout.tsx` (adds SidebarProvider wrapper)
 
-**Step 1: Create sidebar component**
+**Step 1: Install shadcn/ui sidebar**
+
+```bash
+npx shadcn@latest add sidebar
+```
+
+**Step 2: Verify sidebar component installed**
+
+Run: `ls components/ui/sidebar.tsx`
+Expected: File exists
+
+**Step 3: Commit**
+
+```bash
+git add components/ui/sidebar.tsx lib/hooks/
+git commit -m "feat: add shadcn/ui sidebar component"
+```
+
+---
+
+### Task 1.7: Install shadcn/ui Breadcrumb Component
+
+**Files:**
+- Create: `components/ui/breadcrumb.tsx`
+
+**Step 1: Install shadcn/ui breadcrumb**
+
+```bash
+npx shadcn@latest add breadcrumb
+```
+
+**Step 2: Verify breadcrumb component installed**
+
+Run: `ls components/ui/breadcrumb.tsx`
+Expected: File exists
+
+**Step 3: Commit**
+
+```bash
+git add components/ui/breadcrumb.tsx
+git commit -m "feat: add shadcn/ui breadcrumb component"
+```
+
+---
+
+## Phase 2: Layout Components
+
+### Task 2.1: Create App Sidebar Using shadcn/ui Sidebar
+
+**Files:**
+- Create: `components/layout/app-sidebar.tsx`
+
+**Step 1: Create app sidebar using shadcn/ui Sidebar components**
 
 ```tsx
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   Activity,
@@ -337,16 +395,28 @@ import {
   BarChart3,
   FileText,
   ChevronDown,
-  ChevronRight,
   GitBranch,
 } from "lucide-react";
-import { useState } from "react";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+} from "@/components/ui/sidebar";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Repository {
   id: string;
@@ -354,7 +424,7 @@ interface Repository {
   fullName: string;
 }
 
-interface SidebarProps {
+interface AppSidebarProps {
   repositories?: Repository[];
   user?: {
     email: string;
@@ -377,127 +447,98 @@ const accountItems = [
   { href: "/settings", label: "General Settings", icon: Settings },
 ];
 
-export function Sidebar({ repositories = [], user }: SidebarProps) {
+export function AppSidebar({ repositories = [], user }: AppSidebarProps) {
   const pathname = usePathname();
-  const [expandedRepos, setExpandedRepos] = useState<string[]>([]);
-
-  const toggleRepo = (repoId: string) => {
-    setExpandedRepos((prev) =>
-      prev.includes(repoId)
-        ? prev.filter((id) => id !== repoId)
-        : [...prev, repoId]
-    );
-  };
 
   const isActive = (href: string) => pathname === href;
   const isRepoActive = (repoId: string) => pathname.startsWith(`/repos/${repoId}`);
 
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-60 border-r border-sidebar-border bg-sidebar">
-      <div className="flex h-full flex-col">
-        {/* Logo */}
-        <div className="border-b border-sidebar-border p-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full border border-black">
-              <span className="text-sm font-bold">S</span>
-            </div>
-            <div>
-              <div className="font-semibold">Sentinel</div>
-              <div className="text-xs text-muted-foreground">
-                {user?.plan || "Free Plan"}
-              </div>
+    <Sidebar>
+      <SidebarHeader className="border-b border-sidebar-border">
+        <div className="flex items-center gap-2 p-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full border border-black">
+            <span className="text-sm font-bold">S</span>
+          </div>
+          <div>
+            <div className="font-semibold">Sentinel</div>
+            <div className="text-xs text-muted-foreground">
+              {user?.plan || "Free Plan"}
             </div>
           </div>
         </div>
+      </SidebarHeader>
 
-        <ScrollArea className="flex-1 px-3 py-4">
-          {/* Main Menu */}
-          <div className="mb-6">
-            <div className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Main Menu
-            </div>
-            <nav className="space-y-1">
+      <SidebarContent>
+        {/* Main Menu */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Main Menu</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
               {mainMenuItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm transition-colors",
-                    isActive(item.href)
-                      ? "bg-white font-medium text-accent-orange"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent"
-                  )}
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
-
-          {/* Repositories */}
-          <div className="mb-6">
-            <div className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Repositories
-            </div>
-            <nav className="space-y-1">
-              {repositories.map((repo) => (
-                <Collapsible
-                  key={repo.id}
-                  open={expandedRepos.includes(repo.id)}
-                  onOpenChange={() => toggleRepo(repo.id)}
-                >
-                  <CollapsibleTrigger
-                    className={cn(
-                      "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm transition-colors",
-                      isRepoActive(repo.id)
-                        ? "bg-white font-medium"
-                        : "text-sidebar-foreground hover:bg-sidebar-accent"
-                    )}
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(item.href)}
+                    className={isActive(item.href) ? "text-accent-orange" : ""}
                   >
-                    {expandedRepos.includes(repo.id) ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                    <GitBranch className="h-4 w-4" />
-                    <span className="truncate">{repo.name}</span>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="ml-6 space-y-1 pt-1">
-                    <Link
-                      href={`/repos/${repo.id}`}
-                      className={cn(
-                        "block rounded-sm px-2 py-1 text-sm",
-                        pathname === `/repos/${repo.id}`
-                          ? "bg-white font-medium text-accent-orange"
-                          : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                      )}
-                    >
-                      Pull Requests
+                    <Link href={item.href}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.label}</span>
                     </Link>
-                    <Link
-                      href={`/repos/${repo.id}/reviews`}
-                      className={cn(
-                        "block rounded-sm px-2 py-1 text-sm",
-                        pathname === `/repos/${repo.id}/reviews`
-                          ? "bg-white font-medium text-accent-orange"
-                          : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                      )}
-                    >
-                      Reviews
-                    </Link>
-                    <Link
-                      href={`/repos/${repo.id}/findings`}
-                      className={cn(
-                        "block rounded-sm px-2 py-1 text-sm",
-                        pathname === `/repos/${repo.id}/findings`
-                          ? "bg-white font-medium text-accent-orange"
-                          : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                      )}
-                    >
-                      Findings
-                    </Link>
-                  </CollapsibleContent>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Repositories */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Repositories</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {repositories.map((repo) => (
+                <Collapsible key={repo.id} className="group/collapsible">
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton
+                        className={isRepoActive(repo.id) ? "font-medium" : ""}
+                      >
+                        <GitBranch className="h-4 w-4" />
+                        <span className="truncate">{repo.name}</span>
+                        <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={pathname === `/repos/${repo.id}`}
+                          >
+                            <Link href={`/repos/${repo.id}`}>Pull Requests</Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={pathname === `/repos/${repo.id}/reviews`}
+                          >
+                            <Link href={`/repos/${repo.id}/reviews`}>Reviews</Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={pathname === `/repos/${repo.id}/findings`}
+                          >
+                            <Link href={`/repos/${repo.id}/findings`}>Findings</Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
                 </Collapsible>
               ))}
               {repositories.length === 0 && (
@@ -512,102 +553,101 @@ export function Sidebar({ repositories = [], user }: SidebarProps) {
                   </Link>
                 </div>
               )}
-            </nav>
-          </div>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
-          {/* Code Review */}
-          <div className="mb-6">
-            <div className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Code Review
-            </div>
-            <nav className="space-y-1">
+        {/* Code Review */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Code Review</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
               {codeReviewItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm transition-colors",
-                    isActive(item.href)
-                      ? "bg-white font-medium text-accent-orange"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent"
-                  )}
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(item.href)}
+                    className={isActive(item.href) ? "text-accent-orange" : ""}
+                  >
+                    <Link href={item.href}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               ))}
-            </nav>
-          </div>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
-          {/* Account */}
-          <div className="mb-6">
-            <div className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Account
-            </div>
-            <nav className="space-y-1">
+        {/* Account */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Account</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
               {accountItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm transition-colors",
-                    isActive(item.href)
-                      ? "bg-white font-medium text-accent-orange"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent"
-                  )}
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(item.href)}
+                    className={isActive(item.href) ? "text-accent-orange" : ""}
+                  >
+                    <Link href={item.href}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               ))}
-            </nav>
-          </div>
-        </ScrollArea>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
 
-        {/* User Profile */}
-        <div className="border-t border-sidebar-border p-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-              <span className="text-sm font-medium">
-                {user?.email?.[0]?.toUpperCase() || "U"}
-              </span>
-            </div>
-            <div className="flex-1 truncate">
-              <div className="truncate text-sm font-medium">
-                {user?.email || "user@example.com"}
-              </div>
+      <SidebarFooter className="border-t border-sidebar-border">
+        <div className="flex items-center gap-2 p-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+            <span className="text-sm font-medium">
+              {user?.email?.[0]?.toUpperCase() || "U"}
+            </span>
+          </div>
+          <div className="flex-1 truncate">
+            <div className="truncate text-sm font-medium">
+              {user?.email || "user@example.com"}
             </div>
           </div>
         </div>
-      </div>
-    </aside>
+      </SidebarFooter>
+    </Sidebar>
   );
 }
 ```
 
 **Step 2: Verify file created**
 
-Run: `cat components/layout/sidebar.tsx | head -20`
-Expected: Shows component code
+Run: `cat components/layout/app-sidebar.tsx | head -20`
+Expected: Shows component code with shadcn/ui imports
 
 **Step 3: Commit**
 
 ```bash
-git add components/layout/sidebar.tsx
-git commit -m "feat: create sidebar navigation component"
+git add components/layout/app-sidebar.tsx
+git commit -m "feat: create app sidebar using shadcn/ui Sidebar component"
 ```
 
 ---
 
-### Task 2.2: Create Dashboard Layout
+### Task 2.2: Create Dashboard Layout with SidebarProvider
 
 **Files:**
 - Create: `app/(dashboard)/layout.tsx`
 
-**Step 1: Create dashboard layout with sidebar**
+**Step 1: Create dashboard layout with shadcn/ui SidebarProvider**
 
 ```tsx
-import { Sidebar } from "@/components/layout/sidebar";
+import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/layout/app-sidebar";
+import { Separator } from "@/components/ui/separator";
 
 // Mock data - will be replaced with real data from API
 const mockRepositories = [
@@ -626,10 +666,16 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-background">
-      <Sidebar repositories={mockRepositories} user={mockUser} />
-      <main className="ml-60 min-h-screen p-8">{children}</main>
-    </div>
+    <SidebarProvider>
+      <AppSidebar repositories={mockRepositories} user={mockUser} />
+      <SidebarInset>
+        <header className="flex h-14 items-center gap-2 border-b px-4">
+          <SidebarTrigger />
+          <Separator orientation="vertical" className="h-6" />
+        </header>
+        <main className="flex-1 p-8">{children}</main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
 ```
@@ -637,60 +683,86 @@ export default function DashboardLayout({
 **Step 2: Verify layout file created**
 
 Run: `cat app/\(dashboard\)/layout.tsx`
-Expected: Shows layout code
+Expected: Shows layout code with SidebarProvider
 
 **Step 3: Commit**
 
 ```bash
 git add app/\(dashboard\)/layout.tsx
-git commit -m "feat: create dashboard layout with sidebar"
+git commit -m "feat: create dashboard layout with shadcn/ui SidebarProvider"
 ```
 
 ---
 
-### Task 2.3: Create Breadcrumb Component
+### Task 2.3: Create Page Header with shadcn/ui Breadcrumb
 
 **Files:**
-- Create: `components/layout/breadcrumb.tsx`
+- Create: `components/layout/page-header.tsx`
 
-**Step 1: Create breadcrumb component**
+**Step 1: Create page header component using shadcn/ui Breadcrumb**
 
 ```tsx
-import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { cn } from "@/lib/utils";
+import { Fragment } from "react";
 
-interface BreadcrumbItem {
+interface BreadcrumbItemData {
   label: string;
   href?: string;
 }
 
-interface BreadcrumbProps {
-  items: BreadcrumbItem[];
+interface PageHeaderProps {
+  breadcrumbs?: BreadcrumbItemData[];
+  title: string;
+  subtitle?: string;
   className?: string;
+  actions?: React.ReactNode;
 }
 
-export function Breadcrumb({ items, className }: BreadcrumbProps) {
+export function PageHeader({
+  breadcrumbs,
+  title,
+  subtitle,
+  className,
+  actions,
+}: PageHeaderProps) {
   return (
-    <nav className={cn("flex items-center gap-1 text-sm", className)}>
-      {items.map((item, index) => (
-        <div key={index} className="flex items-center gap-1">
-          {index > 0 && (
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+    <div className={cn("space-y-2", className)}>
+      {breadcrumbs && breadcrumbs.length > 0 && (
+        <Breadcrumb>
+          <BreadcrumbList>
+            {breadcrumbs.map((item, index) => (
+              <Fragment key={index}>
+                <BreadcrumbItem>
+                  {item.href ? (
+                    <BreadcrumbLink href={item.href}>{item.label}</BreadcrumbLink>
+                  ) : (
+                    <BreadcrumbPage>{item.label}</BreadcrumbPage>
+                  )}
+                </BreadcrumbItem>
+                {index < breadcrumbs.length - 1 && <BreadcrumbSeparator />}
+              </Fragment>
+            ))}
+          </BreadcrumbList>
+        </Breadcrumb>
+      )}
+      <div className="flex items-center justify-between">
+        <div>
+          {subtitle && (
+            <div className="text-sm text-muted-foreground">{subtitle}</div>
           )}
-          {item.href ? (
-            <Link
-              href={item.href}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              {item.label}
-            </Link>
-          ) : (
-            <span className="font-medium text-foreground">{item.label}</span>
-          )}
+          <h1 className="text-2xl font-bold">{title}</h1>
         </div>
-      ))}
-    </nav>
+        {actions && <div className="flex items-center gap-2">{actions}</div>}
+      </div>
+    </div>
   );
 }
 ```
@@ -698,8 +770,8 @@ export function Breadcrumb({ items, className }: BreadcrumbProps) {
 **Step 2: Commit**
 
 ```bash
-git add components/layout/breadcrumb.tsx
-git commit -m "feat: create breadcrumb navigation component"
+git add components/layout/page-header.tsx
+git commit -m "feat: create page header with shadcn/ui Breadcrumb"
 ```
 
 ---
@@ -709,10 +781,11 @@ git commit -m "feat: create breadcrumb navigation component"
 **Files:**
 - Create: `components/common/fieldset-card.tsx`
 
-**Step 1: Create fieldset card component**
+**Step 1: Create fieldset card component extending shadcn/ui Card**
 
 ```tsx
 import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ReactNode } from "react";
 
 interface FieldsetCardProps {
@@ -729,21 +802,24 @@ export function FieldsetCard({
   dashed = false,
 }: FieldsetCardProps) {
   return (
-    <div
+    <Card
       className={cn(
-        "relative border bg-white p-6",
-        dashed ? "border-dashed" : "border-solid",
-        "border-black",
+        "relative border-black",
+        dashed && "border-dashed",
         className
       )}
     >
       {legend && (
-        <div className="absolute -top-3 left-4 bg-white px-2 text-sm font-medium">
-          {legend}
-        </div>
+        <CardHeader className="pb-2">
+          <CardTitle className="absolute -top-3 left-4 bg-white px-2 text-sm font-medium">
+            {legend}
+          </CardTitle>
+        </CardHeader>
       )}
-      {children}
-    </div>
+      <CardContent className={legend ? "pt-2" : "pt-6"}>
+        {children}
+      </CardContent>
+    </Card>
   );
 }
 ```
@@ -752,7 +828,7 @@ export function FieldsetCard({
 
 ```bash
 git add components/common/fieldset-card.tsx
-git commit -m "feat: create Turbopuffer-style fieldset card component"
+git commit -m "feat: create Turbopuffer-style fieldset card extending shadcn/ui Card"
 ```
 
 ---
@@ -764,10 +840,11 @@ git commit -m "feat: create Turbopuffer-style fieldset card component"
 **Files:**
 - Create: `components/dashboard/stats-card.tsx`
 
-**Step 1: Create stats card**
+**Step 1: Create stats card using shadcn/ui Card**
 
 ```tsx
 import { cn } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
 import { ReactNode } from "react";
 
 interface StatsCardProps {
@@ -791,29 +868,31 @@ export function StatsCard({
   className,
 }: StatsCardProps) {
   return (
-    <div className={cn("border border-black bg-white p-4", className)}>
-      <div className="flex items-start justify-between">
-        <div className="text-sm text-muted-foreground">{title}</div>
-        {trend && (
-          <span
-            className={cn(
-              "text-xs font-medium",
-              trend.direction === "up" && "text-success",
-              trend.direction === "down" && "text-destructive",
-              trend.direction === "neutral" && "text-muted-foreground"
-            )}
-          >
-            {trend.direction === "up" && "↑"}
-            {trend.direction === "down" && "↓"}
-            {trend.value}
-          </span>
+    <Card className={cn("border-black", className)}>
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between">
+          <div className="text-sm text-muted-foreground">{title}</div>
+          {trend && (
+            <span
+              className={cn(
+                "text-xs font-medium",
+                trend.direction === "up" && "text-success",
+                trend.direction === "down" && "text-destructive",
+                trend.direction === "neutral" && "text-muted-foreground"
+              )}
+            >
+              {trend.direction === "up" && "↑"}
+              {trend.direction === "down" && "↓"}
+              {trend.value}
+            </span>
+          )}
+        </div>
+        <div className="mt-2 text-3xl font-bold">{value}</div>
+        {subtitle && (
+          <div className="mt-1 text-sm text-muted-foreground">{subtitle}</div>
         )}
-      </div>
-      <div className="mt-2 text-3xl font-bold">{value}</div>
-      {subtitle && (
-        <div className="mt-1 text-sm text-muted-foreground">{subtitle}</div>
-      )}
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 ```
@@ -822,7 +901,7 @@ export function StatsCard({
 
 ```bash
 git add components/dashboard/stats-card.tsx
-git commit -m "feat: create stats card component"
+git commit -m "feat: create stats card using shadcn/ui Card"
 ```
 
 ---
@@ -981,6 +1060,7 @@ import { StatsCard } from "@/components/dashboard/stats-card";
 import { ActivityList } from "@/components/dashboard/activity-list";
 import { TopRepos } from "@/components/dashboard/top-repos";
 import { FieldsetCard } from "@/components/common/fieldset-card";
+import { PageHeader } from "@/components/layout/page-header";
 import { Progress } from "@/components/ui/progress";
 
 // Mock data - will be replaced with real API data
@@ -1029,11 +1109,7 @@ const topRepos = [
 export default function DashboardPage() {
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <div className="text-sm text-muted-foreground">Dashboard</div>
-        <h1 className="text-2xl font-bold">Project Overview</h1>
-      </div>
+      <PageHeader subtitle="Dashboard" title="Project Overview" />
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -1136,14 +1212,16 @@ export default function AuthLayout({
 }
 ```
 
-**Step 2: Create login page**
+**Step 2: Create login page using shadcn/ui components**
 
 ```tsx
 // app/(auth)/login/page.tsx
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FieldsetCard } from "@/components/common/fieldset-card";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { Github } from "lucide-react";
 
 export default function LoginPage() {
@@ -1158,51 +1236,50 @@ export default function LoginPage() {
       </div>
 
       {/* Login Form */}
-      <FieldsetCard legend="Sign in" dashed>
-        <form className="space-y-4">
-          <div>
-            <label htmlFor="email" className="text-sm font-medium">
-              Email
-            </label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              className="mt-1"
-            />
+      <Card className="border-dashed border-black">
+        <CardHeader>
+          <CardTitle className="text-lg">Sign in</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <form className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+              />
+            </div>
+
+            <Button type="submit" className="w-full">
+              Sign in
+            </Button>
+          </form>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <Separator className="w-full" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="bg-white px-2 text-muted-foreground">or</span>
+            </div>
           </div>
 
-          <div>
-            <label htmlFor="password" className="text-sm font-medium">
-              Password
-            </label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              className="mt-1"
-            />
-          </div>
-
-          <Button type="submit" className="w-full">
-            Sign in
+          <Button variant="secondary" className="w-full gap-2">
+            <Github className="h-4 w-4" />
+            Continue with GitHub
           </Button>
-        </form>
-
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-black" />
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="bg-white px-2 text-muted-foreground">or</span>
-          </div>
-        </div>
-
-        <Button variant="secondary" className="w-full gap-2">
-          <Github className="h-4 w-4" />
-          Continue with GitHub
-        </Button>
-      </FieldsetCard>
+        </CardContent>
+      </Card>
 
       <p className="text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{" "}
@@ -1215,11 +1292,17 @@ export default function LoginPage() {
 }
 ```
 
-**Step 3: Commit**
+**Step 3: Install shadcn/ui Label component if not present**
 
 ```bash
-git add app/\(auth\)/layout.tsx app/\(auth\)/login/page.tsx
-git commit -m "feat: create login page with Turbopuffer-style form"
+npx shadcn@latest add label
+```
+
+**Step 4: Commit**
+
+```bash
+git add app/\(auth\)/layout.tsx app/\(auth\)/login/page.tsx components/ui/label.tsx
+git commit -m "feat: create login page with shadcn/ui components"
 ```
 
 ---
@@ -1229,13 +1312,15 @@ git commit -m "feat: create login page with Turbopuffer-style form"
 **Files:**
 - Create: `app/(auth)/signup/page.tsx`
 
-**Step 1: Create signup page**
+**Step 1: Create signup page using shadcn/ui components**
 
 ```tsx
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FieldsetCard } from "@/components/common/fieldset-card";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { Github } from "lucide-react";
 
 export default function SignupPage() {
@@ -1250,63 +1335,59 @@ export default function SignupPage() {
       </div>
 
       {/* Signup Form */}
-      <FieldsetCard legend="Create account" dashed>
-        <form className="space-y-4">
-          <div>
-            <label htmlFor="email" className="text-sm font-medium">
-              Email
-            </label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              className="mt-1"
-            />
+      <Card className="border-dashed border-black">
+        <CardHeader>
+          <CardTitle className="text-lg">Create account</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <form className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="••••••••"
+              />
+            </div>
+
+            <Button type="submit" className="w-full">
+              Create account
+            </Button>
+          </form>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <Separator className="w-full" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="bg-white px-2 text-muted-foreground">or</span>
+            </div>
           </div>
 
-          <div>
-            <label htmlFor="password" className="text-sm font-medium">
-              Password
-            </label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              className="mt-1"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="confirmPassword" className="text-sm font-medium">
-              Confirm Password
-            </label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              placeholder="••••••••"
-              className="mt-1"
-            />
-          </div>
-
-          <Button type="submit" className="w-full">
-            Create account
+          <Button variant="secondary" className="w-full gap-2">
+            <Github className="h-4 w-4" />
+            Continue with GitHub
           </Button>
-        </form>
-
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-black" />
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="bg-white px-2 text-muted-foreground">or</span>
-          </div>
-        </div>
-
-        <Button variant="secondary" className="w-full gap-2">
-          <Github className="h-4 w-4" />
-          Continue with GitHub
-        </Button>
-      </FieldsetCard>
+        </CardContent>
+      </Card>
 
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}
@@ -1323,7 +1404,7 @@ export default function SignupPage() {
 
 ```bash
 git add app/\(auth\)/signup/page.tsx
-git commit -m "feat: create signup page"
+git commit -m "feat: create signup page with shadcn/ui components"
 ```
 
 ---
@@ -1335,7 +1416,7 @@ git commit -m "feat: create signup page"
 **Files:**
 - Create: `components/settings/step-indicator.tsx`
 
-**Step 1: Create step indicator**
+**Step 1: Create step indicator using shadcn/ui primitives**
 
 ```tsx
 import { cn } from "@/lib/utils";
@@ -1422,13 +1503,14 @@ git commit -m "feat: create step indicator component for onboarding"
 **Files:**
 - Create: `components/settings/indexing-progress.tsx`
 
-**Step 1: Create indexing progress with SSE support**
+**Step 1: Create indexing progress with SSE support using shadcn/ui Card**
 
 ```tsx
 "use client";
 
 import { cn } from "@/lib/utils";
 import { Check, X, Loader2, Circle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type StepStatus = "pending" | "in_progress" | "completed" | "failed";
 
@@ -1471,53 +1553,56 @@ export function IndexingProgress({
   className,
 }: IndexingProgressProps) {
   return (
-    <div className={cn("border border-black bg-white p-4", className)}>
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-full border border-black" />
-          <div>
-            <div className="font-medium">{repoName} Indexing</div>
-            <div className="text-sm text-muted-foreground">
-              {status === "completed"
-                ? "Indexing Completed"
-                : status === "failed"
-                ? "Indexing Failed"
-                : "Indexing in progress..."}
+    <Card className={cn("border-black", className)}>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-full border border-black" />
+            <div>
+              <CardTitle className="text-base">{repoName} Indexing</CardTitle>
+              <div className="text-sm text-muted-foreground">
+                {status === "completed"
+                  ? "Indexing Completed"
+                  : status === "failed"
+                  ? "Indexing Failed"
+                  : "Indexing in progress..."}
+              </div>
             </div>
           </div>
+          <div className="text-sm text-muted-foreground">
+            {completedSteps}/{totalSteps} Steps
+          </div>
         </div>
-        <div className="text-sm text-muted-foreground">
-          {completedSteps}/{totalSteps} Steps
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          {steps.map((step) => {
+            const Icon = statusIcons[step.status];
+            return (
+              <div key={step.id} className="flex items-center gap-3">
+                <Icon
+                  className={cn(
+                    "h-4 w-4",
+                    statusColors[step.status],
+                    step.status === "in_progress" && "animate-spin"
+                  )}
+                />
+                <span
+                  className={cn(
+                    "text-sm",
+                    step.status === "completed" && "text-success",
+                    step.status === "failed" && "text-destructive",
+                    step.status === "in_progress" && "font-medium"
+                  )}
+                >
+                  {step.label}
+                </span>
+              </div>
+            );
+          })}
         </div>
-      </div>
-
-      <div className="space-y-2">
-        {steps.map((step) => {
-          const Icon = statusIcons[step.status];
-          return (
-            <div key={step.id} className="flex items-center gap-3">
-              <Icon
-                className={cn(
-                  "h-4 w-4",
-                  statusColors[step.status],
-                  step.status === "in_progress" && "animate-spin"
-                )}
-              />
-              <span
-                className={cn(
-                  "text-sm",
-                  step.status === "completed" && "text-success",
-                  step.status === "failed" && "text-destructive",
-                  step.status === "in_progress" && "font-medium"
-                )}
-              >
-                {step.label}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 ```
@@ -1526,7 +1611,7 @@ export function IndexingProgress({
 
 ```bash
 git add components/settings/indexing-progress.tsx
-git commit -m "feat: create indexing progress component with step status"
+git commit -m "feat: create indexing progress component with shadcn/ui Card"
 ```
 
 ---
@@ -1536,7 +1621,7 @@ git commit -m "feat: create indexing progress component with step status"
 **Files:**
 - Create: `app/(dashboard)/settings/page.tsx`
 
-**Step 1: Create settings page with wizard**
+**Step 1: Create settings page with wizard using shadcn/ui components**
 
 ```tsx
 "use client";
@@ -1546,9 +1631,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { FieldsetCard } from "@/components/common/fieldset-card";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { StepIndicator } from "@/components/settings/step-indicator";
-import { IndexingProgress } from "@/components/settings/indexing-progress";
+import { PageHeader } from "@/components/layout/page-header";
 import { Github, ChevronLeft, ChevronRight } from "lucide-react";
 
 const STEPS = [
@@ -1595,181 +1682,186 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <div className="text-sm text-muted-foreground">Settings</div>
-        <h1 className="text-2xl font-bold">AI Code Review Agent</h1>
-      </div>
+      <PageHeader subtitle="Settings" title="AI Code Review Agent" />
 
       {/* Step Indicator */}
       <StepIndicator steps={steps} currentStep={currentStep} />
 
       {/* Step Content */}
-      <FieldsetCard legend={STEPS[currentStep - 1].label}>
-        {/* Step 1: Connect GitHub */}
-        {currentStep === 1 && (
-          <div className="space-y-6 text-center">
-            <p className="text-muted-foreground">
-              Connect your GitHub account to allow Sentinel AI to access and
-              review your repositories
-            </p>
-            <div className="flex justify-center">
-              <Github className="h-16 w-16 text-muted-foreground" />
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Click the button below to authenticate with GitHub
-            </p>
-            <Button className="gap-2">
-              <Github className="h-4 w-4" />
-              Connect GitHub
-            </Button>
-          </div>
-        )}
-
-        {/* Step 2: Select Repositories */}
-        {currentStep === 2 && (
-          <div className="space-y-4">
-            <p className="text-muted-foreground">
-              Choose which repositories you want Sentinel AI to index and review
-            </p>
-            <Input placeholder="Search repositories..." />
-            <div className="space-y-2 border border-black">
-              {mockRepos.map((repo) => (
-                <div
-                  key={repo.id}
-                  className="flex items-center justify-between border-b border-muted p-3 last:border-b-0"
-                >
-                  <div className="flex items-center gap-3">
-                    <Checkbox
-                      id={repo.id}
-                      checked={selectedRepos.includes(repo.id)}
-                      onCheckedChange={() => toggleRepo(repo.id)}
-                    />
-                    <label htmlFor={repo.id} className="text-sm">
-                      <Github className="mr-2 inline h-4 w-4" />
-                      {repo.name}
-                    </label>
-                  </div>
-                  {repo.indexed && (
-                    <span className="text-xs bg-success/10 text-success px-2 py-0.5">
-                      Indexed
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {selectedRepos.length} of {mockRepos.length} repositories selected
-            </p>
-          </div>
-        )}
-
-        {/* Step 3: Custom Context */}
-        {currentStep === 3 && (
-          <div className="space-y-4">
-            <p className="text-muted-foreground">
-              Add repository-specific details to help the AI understand your
-              codebase better
-            </p>
-            <div>
-              <label className="text-sm font-medium">Custom Instructions</label>
-              <Textarea
-                className="mt-1 min-h-[120px]"
-                placeholder="Add any specific coding standards, conventions, or context about your repositories that would help the AI provide better reviews..."
-                value={customContext}
-                onChange={(e) => setCustomContext(e.target.value)}
-              />
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Example: &quot;We use TypeScript strict mode. Prefer functional
-              components over class components. Follow Airbnb style guide.&quot;
-            </p>
-            <div className="border border-black p-3">
-              <div className="text-sm font-medium">Selected repositories:</div>
-              <div className="mt-1 flex flex-wrap gap-2">
-                {selectedRepos.length > 0 ? (
-                  mockRepos
-                    .filter((r) => selectedRepos.includes(r.id))
-                    .map((repo) => (
-                      <span
-                        key={repo.id}
-                        className="bg-muted px-2 py-0.5 text-sm"
-                      >
-                        {repo.name.split("/")[1]}
-                      </span>
-                    ))
-                ) : (
-                  <span className="text-sm text-muted-foreground">
-                    No repositories selected
-                  </span>
-                )}
+      <Card className="border-black">
+        <CardHeader>
+          <CardTitle>{STEPS[currentStep - 1].label}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {/* Step 1: Connect GitHub */}
+          {currentStep === 1 && (
+            <div className="space-y-6 text-center">
+              <p className="text-muted-foreground">
+                Connect your GitHub account to allow Sentinel AI to access and
+                review your repositories
+              </p>
+              <div className="flex justify-center">
+                <Github className="h-16 w-16 text-muted-foreground" />
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step 4: Index Repos */}
-        {currentStep === 4 && (
-          <div className="space-y-4">
-            <p className="text-muted-foreground">
-              Index selected repositories to enable AI code review
-            </p>
-            <div className="border border-black bg-success/5 p-3">
-              <div className="text-sm font-medium">Already Indexed</div>
-              <div className="mt-1 flex gap-2">
-                {mockRepos
-                  .filter((r) => r.indexed)
-                  .map((repo) => (
-                    <span
-                      key={repo.id}
-                      className="bg-success/10 text-success px-2 py-0.5 text-sm"
-                    >
-                      {repo.name.split("/")[1]}
-                    </span>
-                  ))}
-              </div>
-            </div>
-            <div className="border border-black p-3">
-              <div className="text-sm font-medium">Repositories to Index</div>
-              <div className="mt-1 flex gap-2">
-                {selectedRepos.length > 0 ? (
-                  mockRepos
-                    .filter((r) => selectedRepos.includes(r.id) && !r.indexed)
-                    .map((repo) => (
-                      <span key={repo.id} className="bg-muted px-2 py-0.5 text-sm">
-                        {repo.name.split("/")[1]}
-                      </span>
-                    ))
-                ) : (
-                  <span className="text-sm text-muted-foreground">
-                    No new repositories to index
-                  </span>
-                )}
-              </div>
-              <Button className="mt-4 gap-2">
+              <p className="text-sm text-muted-foreground">
+                Click the button below to authenticate with GitHub
+              </p>
+              <Button className="gap-2">
                 <Github className="h-4 w-4" />
-                Start Indexing
+                Connect GitHub
               </Button>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Navigation */}
-        <div className="mt-6 flex items-center justify-between border-t border-muted pt-4">
-          <Button
-            variant="secondary"
-            onClick={handleBack}
-            disabled={currentStep === 1}
-            className="gap-1"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Back
-          </Button>
-          <Button onClick={handleNext} disabled={currentStep === 4} className="gap-1">
-            Next
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </FieldsetCard>
+          {/* Step 2: Select Repositories */}
+          {currentStep === 2 && (
+            <div className="space-y-4">
+              <p className="text-muted-foreground">
+                Choose which repositories you want Sentinel AI to index and review
+              </p>
+              <Input placeholder="Search repositories..." />
+              <Card className="border-black">
+                <CardContent className="p-0">
+                  {mockRepos.map((repo) => (
+                    <div
+                      key={repo.id}
+                      className="flex items-center justify-between border-b border-muted p-3 last:border-b-0"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          id={repo.id}
+                          checked={selectedRepos.includes(repo.id)}
+                          onCheckedChange={() => toggleRepo(repo.id)}
+                        />
+                        <Label htmlFor={repo.id} className="text-sm cursor-pointer">
+                          <Github className="mr-2 inline h-4 w-4" />
+                          {repo.name}
+                        </Label>
+                      </div>
+                      {repo.indexed && (
+                        <Badge variant="secondary" className="bg-success/10 text-success">
+                          Indexed
+                        </Badge>
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+              <p className="text-sm text-muted-foreground">
+                {selectedRepos.length} of {mockRepos.length} repositories selected
+              </p>
+            </div>
+          )}
+
+          {/* Step 3: Custom Context */}
+          {currentStep === 3 && (
+            <div className="space-y-4">
+              <p className="text-muted-foreground">
+                Add repository-specific details to help the AI understand your
+                codebase better
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="customContext">Custom Instructions</Label>
+                <Textarea
+                  id="customContext"
+                  className="min-h-[120px]"
+                  placeholder="Add any specific coding standards, conventions, or context about your repositories that would help the AI provide better reviews..."
+                  value={customContext}
+                  onChange={(e) => setCustomContext(e.target.value)}
+                />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Example: &quot;We use TypeScript strict mode. Prefer functional
+                components over class components. Follow Airbnb style guide.&quot;
+              </p>
+              <Card className="border-black">
+                <CardContent className="p-3">
+                  <div className="text-sm font-medium">Selected repositories:</div>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {selectedRepos.length > 0 ? (
+                      mockRepos
+                        .filter((r) => selectedRepos.includes(r.id))
+                        .map((repo) => (
+                          <Badge key={repo.id} variant="secondary">
+                            {repo.name.split("/")[1]}
+                          </Badge>
+                        ))
+                    ) : (
+                      <span className="text-sm text-muted-foreground">
+                        No repositories selected
+                      </span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Step 4: Index Repos */}
+          {currentStep === 4 && (
+            <div className="space-y-4">
+              <p className="text-muted-foreground">
+                Index selected repositories to enable AI code review
+              </p>
+              <Card className="border-black bg-success/5">
+                <CardContent className="p-3">
+                  <div className="text-sm font-medium">Already Indexed</div>
+                  <div className="mt-1 flex gap-2">
+                    {mockRepos
+                      .filter((r) => r.indexed)
+                      .map((repo) => (
+                        <Badge key={repo.id} variant="secondary" className="bg-success/10 text-success">
+                          {repo.name.split("/")[1]}
+                        </Badge>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-black">
+                <CardContent className="p-3">
+                  <div className="text-sm font-medium">Repositories to Index</div>
+                  <div className="mt-1 flex gap-2">
+                    {selectedRepos.length > 0 ? (
+                      mockRepos
+                        .filter((r) => selectedRepos.includes(r.id) && !r.indexed)
+                        .map((repo) => (
+                          <Badge key={repo.id} variant="secondary">
+                            {repo.name.split("/")[1]}
+                          </Badge>
+                        ))
+                    ) : (
+                      <span className="text-sm text-muted-foreground">
+                        No new repositories to index
+                      </span>
+                    )}
+                  </div>
+                  <Button className="mt-4 gap-2">
+                    <Github className="h-4 w-4" />
+                    Start Indexing
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Navigation */}
+          <div className="mt-6 flex items-center justify-between border-t border-muted pt-4">
+            <Button
+              variant="secondary"
+              onClick={handleBack}
+              disabled={currentStep === 1}
+              className="gap-1"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Back
+            </Button>
+            <Button onClick={handleNext} disabled={currentStep === 4} className="gap-1">
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -1785,7 +1877,7 @@ Expected: Settings page with wizard steps
 
 ```bash
 git add app/\(dashboard\)/settings/page.tsx
-git commit -m "feat: create general settings page with onboarding wizard"
+git commit -m "feat: create general settings page with shadcn/ui components"
 ```
 
 ---
@@ -1797,10 +1889,11 @@ git commit -m "feat: create general settings page with onboarding wizard"
 **Files:**
 - Create: `components/review/severity-badge.tsx`
 
-**Step 1: Create severity badge**
+**Step 1: Create severity badge using shadcn/ui Badge**
 
 ```tsx
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 type Severity = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "NIT";
 
@@ -1810,32 +1903,21 @@ interface SeverityBadgeProps {
 }
 
 const severityStyles: Record<Severity, string> = {
-  CRITICAL: "bg-severity-critical text-white",
-  HIGH: "border border-severity-high text-severity-high bg-transparent",
-  MEDIUM: "border border-severity-medium text-severity-medium bg-transparent",
-  LOW: "border border-severity-low text-severity-low bg-transparent",
-  NIT: "text-severity-nit bg-transparent",
-};
-
-const severityLabels: Record<Severity, string> = {
-  CRITICAL: "CRITICAL",
-  HIGH: "HIGH",
-  MEDIUM: "MEDIUM",
-  LOW: "LOW",
-  NIT: "NIT",
+  CRITICAL: "bg-severity-critical text-white border-severity-critical",
+  HIGH: "bg-transparent border-severity-high text-severity-high",
+  MEDIUM: "bg-transparent border-severity-medium text-severity-medium",
+  LOW: "bg-transparent border-severity-low text-severity-low",
+  NIT: "bg-transparent border-severity-nit text-severity-nit",
 };
 
 export function SeverityBadge({ severity, className }: SeverityBadgeProps) {
   return (
-    <span
-      className={cn(
-        "inline-flex items-center px-2 py-0.5 text-xs font-medium",
-        severityStyles[severity],
-        className
-      )}
+    <Badge
+      variant="outline"
+      className={cn(severityStyles[severity], className)}
     >
-      {severityLabels[severity]}
-    </span>
+      {severity}
+    </Badge>
   );
 }
 ```
@@ -1844,7 +1926,7 @@ export function SeverityBadge({ severity, className }: SeverityBadgeProps) {
 
 ```bash
 git add components/review/severity-badge.tsx
-git commit -m "feat: create severity badge component"
+git commit -m "feat: create severity badge using shadcn/ui Badge"
 ```
 
 ---
@@ -1854,11 +1936,13 @@ git commit -m "feat: create severity badge component"
 **Files:**
 - Create: `components/review/finding-card.tsx`
 
-**Step 1: Create finding card**
+**Step 1: Create finding card using shadcn/ui Card**
 
 ```tsx
 import { SeverityBadge } from "./severity-badge";
 import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 type Severity = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "NIT";
 type FindingType = "bug" | "security" | "performance" | "style" | "design" | "docs";
@@ -1883,33 +1967,33 @@ export function FindingCard({
   className,
 }: FindingCardProps) {
   return (
-    <div className={cn("border border-black bg-white", className)}>
+    <Card className={cn("border-black", className)}>
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-muted bg-muted/30 px-4 py-2">
+      <CardHeader className="bg-muted/30 px-4 py-2">
         <code className="text-sm">
           {filePath}:{lineNumber}
         </code>
-      </div>
+      </CardHeader>
 
-      {/* Badge Row */}
-      <div className="flex items-center gap-2 px-4 py-2">
-        <SeverityBadge severity={severity} />
-        <span className="text-sm text-muted-foreground">{findingType}</span>
-      </div>
+      <CardContent className="p-4">
+        {/* Badge Row */}
+        <div className="flex items-center gap-2 mb-3">
+          <SeverityBadge severity={severity} />
+          <Badge variant="outline">{findingType}</Badge>
+        </div>
 
-      {/* Content */}
-      <div className="px-4 pb-4">
+        {/* Content */}
         <p className="text-sm">{message}</p>
 
         {suggestion && (
           <div className="mt-3">
-            <pre className="overflow-x-auto bg-muted p-3 text-sm">
+            <pre className="overflow-x-auto bg-muted p-3 text-sm rounded">
               <code>{suggestion}</code>
             </pre>
           </div>
         )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 ```
@@ -1918,7 +2002,7 @@ export function FindingCard({
 
 ```bash
 git add components/review/finding-card.tsx
-git commit -m "feat: create finding card component"
+git commit -m "feat: create finding card using shadcn/ui Card"
 ```
 
 ---
@@ -1928,12 +2012,14 @@ git commit -m "feat: create finding card component"
 **Files:**
 - Create: `components/repository/pr-card.tsx`
 
-**Step 1: Create PR card**
+**Step 1: Create PR card using shadcn/ui Card and Badge**
 
 ```tsx
 import Link from "next/link";
 import { SeverityBadge } from "@/components/review/severity-badge";
 import { cn } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 type ReviewStatus = "completed" | "pending" | "failed";
 
@@ -1953,9 +2039,9 @@ interface PRCardProps {
 }
 
 const statusStyles: Record<ReviewStatus, string> = {
-  completed: "bg-success text-white",
-  pending: "bg-warning text-white",
-  failed: "bg-destructive text-white",
+  completed: "bg-success text-white border-success",
+  pending: "bg-warning text-white border-warning",
+  failed: "bg-destructive text-white border-destructive",
 };
 
 const statusLabels: Record<ReviewStatus, string> = {
@@ -1979,52 +2065,50 @@ export function PRCard({
   className,
 }: PRCardProps) {
   return (
-    <Link
-      href={`/repos/${repoId}/pr/${prNumber}`}
-      className={cn(
-        "block border border-black bg-white p-4 hover:bg-muted/30 transition-colors",
-        className
-      )}
-    >
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-muted-foreground">#{prNumber}</span>
-            <span className="font-medium">{title}</span>
+    <Link href={`/repos/${repoId}/pr/${prNumber}`}>
+      <Card
+        className={cn(
+          "border-black hover:bg-muted/30 transition-colors cursor-pointer",
+          className
+        )}
+      >
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-muted-foreground">#{prNumber}</span>
+                <span className="font-medium">{title}</span>
+              </div>
+              <div className="mt-1 text-sm text-muted-foreground">
+                opened {createdAt} by @{author}
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                base: {baseBranch} ← head: {headBranch}
+              </div>
+            </div>
           </div>
-          <div className="mt-1 text-sm text-muted-foreground">
-            opened {createdAt} by @{author}
-          </div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            base: {baseBranch} ← head: {headBranch}
-          </div>
-        </div>
-      </div>
 
-      {/* Badges */}
-      <div className="mt-3 flex flex-wrap gap-2">
-        {reviewStatus && (
-          <span
-            className={cn(
-              "px-2 py-0.5 text-xs font-medium",
-              statusStyles[reviewStatus]
+          {/* Badges */}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {reviewStatus && (
+              <Badge className={statusStyles[reviewStatus]}>
+                {statusLabels[reviewStatus]}
+              </Badge>
             )}
-          >
-            {statusLabels[reviewStatus]}
-          </span>
-        )}
-        {bugCount !== undefined && bugCount > 0 && highestSeverity && (
-          <span className="flex items-center gap-1 border border-black px-2 py-0.5 text-xs">
-            {bugCount} bugs
-            <SeverityBadge severity={highestSeverity} />
-          </span>
-        )}
-        {nitCount !== undefined && nitCount > 0 && (
-          <span className="border border-muted px-2 py-0.5 text-xs text-muted-foreground">
-            {nitCount} nits
-          </span>
-        )}
-      </div>
+            {bugCount !== undefined && bugCount > 0 && highestSeverity && (
+              <Badge variant="outline" className="border-black gap-1">
+                {bugCount} bugs
+                <SeverityBadge severity={highestSeverity} />
+              </Badge>
+            )}
+            {nitCount !== undefined && nitCount > 0 && (
+              <Badge variant="outline" className="border-muted text-muted-foreground">
+                {nitCount} nits
+              </Badge>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </Link>
   );
 }
@@ -2034,7 +2118,7 @@ export function PRCard({
 
 ```bash
 git add components/repository/pr-card.tsx
-git commit -m "feat: create PR card component"
+git commit -m "feat: create PR card using shadcn/ui Card and Badge"
 ```
 
 ---
@@ -2044,14 +2128,14 @@ git commit -m "feat: create PR card component"
 **Files:**
 - Create: `app/(dashboard)/repos/[id]/page.tsx`
 
-**Step 1: Create repository detail page**
+**Step 1: Create repository detail page using shadcn/ui components**
 
 ```tsx
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Breadcrumb } from "@/components/layout/breadcrumb";
+import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/layout/page-header";
 import { PRCard } from "@/components/repository/pr-card";
-import { FieldsetCard } from "@/components/common/fieldset-card";
 import { RefreshCw, Search, Star, GitFork } from "lucide-react";
 
 // Mock data
@@ -2096,52 +2180,54 @@ export default function RepositoryDetailPage({
 }: {
   params: { id: string };
 }) {
-  const breadcrumbItems = [
+  const breadcrumbs = [
     { label: "Repositories", href: "/dashboard" },
     { label: mockRepo.name },
   ];
 
   return (
     <div className="space-y-6">
-      <Breadcrumb items={breadcrumbItems} />
+      <PageHeader
+        breadcrumbs={breadcrumbs}
+        title={mockRepo.name}
+        subtitle={mockRepo.fullName}
+      />
 
-      {/* Repo Header */}
-      <FieldsetCard>
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-black">
-              <span className="font-bold">
-                {mockRepo.name[0].toUpperCase()}
-              </span>
+      {/* Repo Header Card */}
+      <Card className="border-black">
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full border border-black">
+                <span className="font-bold">
+                  {mockRepo.name[0].toUpperCase()}
+                </span>
+              </div>
+              <div>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Star className="h-4 w-4" />
+                    {mockRepo.stars}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <GitFork className="h-4 w-4" />
+                    {mockRepo.forks}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold">{mockRepo.name}</h1>
+            <div className="text-right">
               <div className="text-sm text-muted-foreground">
-                {mockRepo.fullName}
+                Last indexed: {mockRepo.lastIndexedAt}
               </div>
-              <div className="mt-1 flex items-center gap-4 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Star className="h-4 w-4" />
-                  {mockRepo.stars}
-                </span>
-                <span className="flex items-center gap-1">
-                  <GitFork className="h-4 w-4" />
-                  {mockRepo.forks}
-                </span>
-              </div>
+              <Button variant="secondary" size="sm" className="mt-2 gap-1">
+                <RefreshCw className="h-4 w-4" />
+                Re-index
+              </Button>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-sm text-muted-foreground">
-              Last indexed: {mockRepo.lastIndexedAt}
-            </div>
-            <Button variant="secondary" size="sm" className="mt-2 gap-1">
-              <RefreshCw className="h-4 w-4" />
-              Re-index
-            </Button>
-          </div>
-        </div>
-      </FieldsetCard>
+        </CardContent>
+      </Card>
 
       {/* PR List Header */}
       <div className="flex items-center justify-between">
@@ -2174,7 +2260,7 @@ export default function RepositoryDetailPage({
 
 ```bash
 git add app/\(dashboard\)/repos/\[id\]/page.tsx
-git commit -m "feat: create repository detail page with PR list"
+git commit -m "feat: create repository detail page with shadcn/ui components"
 ```
 
 ---
@@ -2184,13 +2270,14 @@ git commit -m "feat: create repository detail page with PR list"
 **Files:**
 - Create: `app/(dashboard)/repos/[id]/pr/[number]/review/[reviewId]/page.tsx`
 
-**Step 1: Create review detail page**
+**Step 1: Create review detail page using shadcn/ui components**
 
 ```tsx
-import { Breadcrumb } from "@/components/layout/breadcrumb";
-import { FieldsetCard } from "@/components/common/fieldset-card";
+import { PageHeader } from "@/components/layout/page-header";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FindingCard } from "@/components/review/finding-card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Check, ExternalLink } from "lucide-react";
 
 // Mock data
@@ -2245,7 +2332,7 @@ export default function ReviewDetailPage({
 }: {
   params: { id: string; number: string; reviewId: string };
 }) {
-  const breadcrumbItems = [
+  const breadcrumbs = [
     { label: "Repositories", href: "/dashboard" },
     { label: mockReview.pr.repoName, href: `/repos/${params.id}` },
     { label: `PR #${mockReview.pr.number}`, href: `/repos/${params.id}/pr/${params.number}` },
@@ -2254,59 +2341,62 @@ export default function ReviewDetailPage({
 
   return (
     <div className="space-y-6">
-      <Breadcrumb items={breadcrumbItems} />
-
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">{mockReview.pr.title}</h1>
-      </div>
+      <PageHeader
+        breadcrumbs={breadcrumbs}
+        title={mockReview.pr.title}
+      />
 
       {/* Review Summary */}
-      <FieldsetCard legend="Review Summary">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div>
-            <div className="text-sm text-muted-foreground">Status</div>
-            <div className="mt-1 flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-success text-white">
-                <Check className="h-3 w-3" />
-              </span>
-              <span className="font-medium capitalize">{mockReview.status}</span>
+      <Card className="border-black">
+        <CardHeader>
+          <CardTitle>Review Summary</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <div className="text-sm text-muted-foreground">Status</div>
+              <div className="mt-1 flex items-center gap-2">
+                <Badge className="bg-success text-white">
+                  <Check className="mr-1 h-3 w-3" />
+                  {mockReview.status}
+                </Badge>
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Published</div>
+              <div className="mt-1 font-medium">
+                {mockReview.published ? "Yes" : "No"}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Duration</div>
+              <div className="mt-1 font-medium">{mockReview.duration}</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Findings</div>
+              <div className="mt-1 font-medium">{mockReview.findingsCount} total</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Model</div>
+              <div className="mt-1 font-medium font-mono text-sm">
+                {mockReview.model}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Head SHA</div>
+              <div className="mt-1 font-medium font-mono text-sm">
+                {mockReview.headSha}
+              </div>
             </div>
           </div>
-          <div>
-            <div className="text-sm text-muted-foreground">Published</div>
-            <div className="mt-1 font-medium">
-              {mockReview.published ? "Yes" : "No"}
-            </div>
-          </div>
-          <div>
-            <div className="text-sm text-muted-foreground">Duration</div>
-            <div className="mt-1 font-medium">{mockReview.duration}</div>
-          </div>
-          <div>
-            <div className="text-sm text-muted-foreground">Findings</div>
-            <div className="mt-1 font-medium">{mockReview.findingsCount} total</div>
-          </div>
-          <div>
-            <div className="text-sm text-muted-foreground">Model</div>
-            <div className="mt-1 font-medium font-mono text-sm">
-              {mockReview.model}
-            </div>
-          </div>
-          <div>
-            <div className="text-sm text-muted-foreground">Head SHA</div>
-            <div className="mt-1 font-medium font-mono text-sm">
-              {mockReview.headSha}
-            </div>
-          </div>
-        </div>
-        {mockReview.githubReviewId && (
-          <Button variant="secondary" size="sm" className="mt-4 gap-1">
-            <ExternalLink className="h-4 w-4" />
-            View on GitHub
-          </Button>
-        )}
-      </FieldsetCard>
+          {mockReview.githubReviewId && (
+            <Button variant="secondary" size="sm" className="mt-4 gap-1">
+              <ExternalLink className="h-4 w-4" />
+              View on GitHub
+            </Button>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Findings Header */}
       <div className="flex items-center justify-between">
@@ -2339,7 +2429,7 @@ export default function ReviewDetailPage({
 
 ```bash
 git add "app/(dashboard)/repos/[id]/pr/[number]/review/[reviewId]/page.tsx"
-git commit -m "feat: create review detail page with findings"
+git commit -m "feat: create review detail page with shadcn/ui components"
 ```
 
 ---
@@ -2384,8 +2474,8 @@ git commit -m "feat: redirect root to dashboard"
 
 ```typescript
 // components/layout/index.ts
-export * from "./sidebar";
-export * from "./breadcrumb";
+export * from "./app-sidebar";
+export * from "./page-header";
 
 // components/dashboard/index.ts
 export * from "./stats-card";
@@ -2453,30 +2543,46 @@ git commit -m "chore: final verification and cleanup"
 
 ## Summary
 
+### shadcn/ui Components Used
+
+All UI components strictly use shadcn/ui:
+- **Sidebar**: `@/components/ui/sidebar` with SidebarProvider, SidebarMenu, SidebarMenuItem, etc.
+- **Breadcrumb**: `@/components/ui/breadcrumb` with BreadcrumbList, BreadcrumbItem, etc.
+- **Card**: `@/components/ui/card` for all card layouts
+- **Badge**: `@/components/ui/badge` for all badges including severity
+- **Button**: `@/components/ui/button` for all buttons
+- **Input**: `@/components/ui/input` for all inputs
+- **Label**: `@/components/ui/label` for form labels
+- **Checkbox**: `@/components/ui/checkbox` for checkboxes
+- **Textarea**: `@/components/ui/textarea` for text areas
+- **Progress**: `@/components/ui/progress` for progress bars
+- **Separator**: `@/components/ui/separator` for dividers
+- **Collapsible**: `@/components/ui/collapsible` for expandable sections
+
 ### Completed Components
 
 **Layout:**
-- `components/layout/sidebar.tsx` - Main navigation
-- `components/layout/breadcrumb.tsx` - Breadcrumb navigation
+- `components/layout/app-sidebar.tsx` - Main navigation using shadcn/ui Sidebar
+- `components/layout/page-header.tsx` - Page header with shadcn/ui Breadcrumb
 
 **Dashboard:**
-- `components/dashboard/stats-card.tsx` - Statistics display
+- `components/dashboard/stats-card.tsx` - Statistics using shadcn/ui Card
 - `components/dashboard/activity-list.tsx` - Recent activity
 - `components/dashboard/top-repos.tsx` - Repository rankings
 
 **Common:**
-- `components/common/fieldset-card.tsx` - Turbopuffer-style card
+- `components/common/fieldset-card.tsx` - Turbopuffer-style card extending shadcn/ui Card
 
 **Review:**
-- `components/review/severity-badge.tsx` - Severity indicators
-- `components/review/finding-card.tsx` - Code review findings
+- `components/review/severity-badge.tsx` - Severity using shadcn/ui Badge
+- `components/review/finding-card.tsx` - Code review findings using shadcn/ui Card
 
 **Repository:**
-- `components/repository/pr-card.tsx` - PR list items
+- `components/repository/pr-card.tsx` - PR list items using shadcn/ui Card
 
 **Settings:**
 - `components/settings/step-indicator.tsx` - Wizard progress
-- `components/settings/indexing-progress.tsx` - SSE progress display
+- `components/settings/indexing-progress.tsx` - SSE progress using shadcn/ui Card
 
 ### Completed Pages
 
@@ -2500,7 +2606,7 @@ git commit -m "chore: final verification and cleanup"
 
 ---
 
-**Plan complete and saved to `.claude/plans/2026-01-31-sentinel-dashboard-implementation.md`**
+**Plan complete and saved to `docs/plans/2026-01-31-sentinel-dashboard-implementation.md`**
 
 Two execution options:
 

@@ -1,3 +1,4 @@
+
 # Sentinel Frontend Dashboard Design
 
 **Date:** 2026-01-31
