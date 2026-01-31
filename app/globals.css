@@ -111,18 +111,45 @@
   --severity-medium: #F59E0B;
   --severity-low: #6B7280;
   --severity-nit: #9CA3AF;
+
+  /* Arbitrary value shadows to avoid @apply space issues */
+  --shadow-premium: 8px 8px 0px 0px rgba(0, 0, 0, 1);
 }
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground font-mono;
   }
+
+  /* Custom selection color */
+  ::selection {
+    @apply bg-black text-white;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-white;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-black border-2 border-white;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-black/80;
+  }
 }
 
-/* Turbopuffer-style fieldset card */
+/* Base UI Styles */
 .fieldset-card {
   @apply relative border border-black bg-white p-6;
 }
@@ -131,27 +158,59 @@
   @apply absolute -top-3 left-4 bg-white px-2 text-sm font-medium;
 }
 
-/* Dashed border variant */
 .fieldset-card-dashed {
   @apply relative border border-dashed border-black bg-white p-6;
 }
 
-.dark {
-  --sidebar: hsl(240 5.9% 10%);
-  --sidebar-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-primary: hsl(224.3 76.3% 48%);
-  --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(240 3.7% 15.9%);
-  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-border: hsl(240 3.7% 15.9%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+/* Spectacular Animations */
+@keyframes slide-up-skew {
+  from {
+    opacity: 0;
+    transform: translateY(20px) skewY(1deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) skewY(0deg);
+  }
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+.animate-spectacular {
+  animation: slide-up-skew 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Staggered entrance helpers */
+.stagger-1 {
+  animation-delay: 100ms;
+}
+
+.stagger-2 {
+  animation-delay: 200ms;
+}
+
+.stagger-3 {
+  animation-delay: 300ms;
+}
+
+.stagger-4 {
+  animation-delay: 400ms;
+}
+
+/* Micro-interactions */
+.btn-premium {
+  @apply transition-all duration-200 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none;
+}
+
+.card-premium {
+  transition: all 0.3s ease;
+}
+
+.card-premium:hover {
+  box-shadow: var(--shadow-premium);
+  transform: translate(-2px, -2px);
+}
+
+/* Glassmorphism subtle variant */
+.glass-subtle {
+  @apply bg-white/80 backdrop-blur-md border border-black/5;
 }
