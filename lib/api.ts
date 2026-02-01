@@ -84,7 +84,8 @@ export const indexingService = {
                 github_repo_id: repo.id, // This is the numerical ID from GitHub
                 repo_id: repo.node_id || String(repo.id),
                 repo_url: repo.html_url,
-                default_branch: repo.default_branch || "main"
+                default_branch: repo.default_branch || "main",
+                template_ids: repo.template_ids || []
             })),
         });
         return response.data;
@@ -99,8 +100,111 @@ export const indexingService = {
     },
 };
 
+export interface ContextTemplate {
+    id: string;
+    user_id: string;
+    name: string;
+    description: string | null;
+    template_content: {
+        guidelines?: string[];
+        coding_standards?: Record<string, any>;
+        custom_rules?: Array<{ rule: string; severity: string }>;
+        focus_areas?: string[];
+        ignore_patterns?: string[];
+        additional_context?: string;
+    };
+    visibility: 'private' | 'organization' | 'public';
+    is_default: boolean;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ContextTemplateList {
+    templates: ContextTemplate[];
+    total: number;
+    page: number;
+    page_size: number;
+    has_more: boolean;
+}
+
+export interface ContextTemplateCreate {
+    name: string;
+    description?: string;
+    template_content?: Record<string, any>;
+    visibility?: 'private' | 'organization' | 'public';
+}
+
+export interface RepositoryTemplateAssignment {
+    id: string;
+    repository_id: string;
+    template_id: string;
+    priority: number;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+    template?: ContextTemplate;
+}
+
 export const githubService = {
     getAuthUrl: () => `${API_BASE_URL}/github/auth`,
+};
+
+export const contextTemplateService = {
+    getAll: async (page = 1, pageSize = 20) => {
+        const response = await api.get<ContextTemplateList>('/templates', {
+            params: { page, page_size: pageSize }
+        });
+        return response.data;
+    },
+    get: async (id: string) => {
+        const response = await api.get<ContextTemplate>(`/templates/${id}`);
+        return response.data;
+    },
+    create: async (data: ContextTemplateCreate) => {
+        const response = await api.post<ContextTemplate>('/templates', data);
+        return response.data;
+    },
+    update: async (id: string, data: Partial<ContextTemplateCreate> & { is_active?: boolean }) => {
+        const response = await api.patch<ContextTemplate>(`/templates/${id}`, data);
+        return response.data;
+    },
+    delete: async (id: string, hardDelete = false) => {
+        await api.delete(`/templates/${id}`, {
+            params: { hard_delete: hardDelete }
+        });
+    },
+    getRepositoryAssignments: async (repositoryId: string) => {
+        const response = await api.get<{ assignments: RepositoryTemplateAssignment[], total: number }>(
+            `/repository/${repositoryId}/templates`
+        );
+        return response.data;
+    },
+    assignToRepository: async (repositoryId: string, templateId: string, priority = 0) => {
+        const response = await api.post<RepositoryTemplateAssignment>(
+            `/repository/${repositoryId}/templates`,
+            { template_id: templateId, priority }
+        );
+        return response.data;
+    },
+    bulkAssign: async (repositoryId: string, templateIds: string[], replaceExisting = false) => {
+        const response = await api.post<{ assigned_count: number }>(
+            `/repository/${repositoryId}/templates/bulk`,
+            { template_ids: templateIds, replace_existing: replaceExisting }
+        );
+        return response.data;
+    },
+    reorderAssignments: async (repositoryId: string, assignmentIds: string[]) => {
+        const response = await api.post<RepositoryTemplateAssignment[]>(
+            `/repository/${repositoryId}/templates/reorder`,
+            { assignment_ids: assignmentIds }
+        );
+        return response.data;
+    },
+    getEffectiveTemplates: async (repositoryId: string) => {
+        const response = await api.get<ContextTemplate[]>(`/repository/${repositoryId}/effective-templates`);
+        return response.data;
+    }
 };
 
 export default api;

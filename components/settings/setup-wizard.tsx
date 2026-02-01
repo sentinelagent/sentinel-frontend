@@ -9,8 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Github, Search, Check, Loader2, ArrowRight, Server, Database, Brain, Sparkles, Terminal, Shield, FileText, Plus } from "lucide-react";
 import { StepIndicator } from "./step-indicator";
 import { cn } from "@/lib/utils";
-import { repositoryService, indexingService, githubService, userService, Repository } from "@/lib/api";
+import { repositoryService, indexingService, githubService, userService, contextTemplateService, Repository } from "@/lib/api";
 import { IndexingStatusCard } from "./indexing-status-card";
+import { TemplateSelector } from "@/components/templates/template-selector";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -29,6 +30,7 @@ export function SetupWizard() {
     const [selectedRepos, setSelectedRepos] = useState<Repository[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [context, setContext] = useState("");
+    const [repoTemplates, setRepoTemplates] = useState<Record<string, string[]>>({});
     const [indexingRuns, setIndexingRuns] = useState<{
         repoId: string;
         repoName: string;
@@ -128,7 +130,13 @@ export function SetupWizard() {
                 throw new Error("No GitHub installation found");
             }
 
-            const response = await indexingService.startIndexing(installationId, selectedRepos);
+            // Map template IDs into the repository objects for the indexing request
+            const repositoriesWithTemplates = selectedRepos.map(repo => ({
+                ...repo,
+                template_ids: repoTemplates[repo.id] || []
+            }));
+
+            const response = await indexingService.startIndexing(installationId, repositoriesWithTemplates);
 
             if (response.repositories) {
                 setIndexingRuns(response.repositories.map((r: any) => {
@@ -292,32 +300,54 @@ export function SetupWizard() {
 
                 {currentStep === 3 && (
                     <div className="animate-spectacular space-y-8">
-                        <FieldsetCard legend="03. Environmental Context" dashed>
-                            <div className="space-y-6">
+                        <FieldsetCard legend="03. Environmental Context">
+                            <div className="space-y-8">
+                                <div className="space-y-6">
+                                    <div className="flex items-center justify-between">
+                                        <div className="space-y-1">
+                                            <h3 className="text-sm font-black uppercase tracking-tight italic">Repository Knowledge Assets</h3>
+                                            <p className="text-[10px] font-bold text-black/40 uppercase tracking-widest">
+                                                Assign templates to provide standard guidelines and architectural context.
+                                            </p>
+                                        </div>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="rounded-none border-black h-8 text-[9px] font-black uppercase tracking-widest"
+                                            onClick={() => window.open('/settings/context', '_blank')}
+                                        >
+                                            Manage Templates
+                                        </Button>
+                                    </div>
+
+                                    <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar border-y border-black/5 py-6">
+                                        {selectedRepos.map((repo) => (
+                                            <div key={repo.id} className="space-y-3 p-4 border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,0.05)]">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="h-2 w-2 bg-black" />
+                                                    <span className="text-xs font-black uppercase tracking-tight">{repo.full_name}</span>
+                                                </div>
+                                                <TemplateSelector
+                                                    repositoryId={repo.id}
+                                                    selectedTemplateIds={repoTemplates[repo.id] || []}
+                                                    onChange={(ids) => setRepoTemplates(prev => ({
+                                                        ...prev,
+                                                        [repo.id]: ids
+                                                    }))}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
                                 <div className="space-y-3">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-black/40">Repository Context & Guidelines</label>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-black/40">Additional Custom Instructions (Optional)</label>
                                     <Textarea
-                                        placeholder="Provide specific instructions or architectural context for the AI... (e.g., 'We use clean architecture with Domain-Driven Design components.')"
-                                        className="min-h-[200px] rounded-none border-2 border-black font-mono text-xs focus-visible:ring-0 leading-relaxed p-6"
+                                        placeholder="Any one-off architectural context or specific rules for this indexing session..."
+                                        className="min-h-[100px] rounded-none border-2 border-black font-mono text-xs focus-visible:ring-0 leading-relaxed p-4"
                                         value={context}
                                         onChange={(e) => setContext(e.target.value)}
                                     />
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="p-4 border border-black/10 flex items-center gap-4">
-                                        <Database className="h-5 w-5 opacity-20" />
-                                        <div className="space-y-0.5">
-                                            <div className="text-[10px] font-black uppercase">Parse Documentation</div>
-                                            <div className="text-[8px] font-bold text-black/40 uppercase">Enable README/Wiki analysis</div>
-                                        </div>
-                                    </div>
-                                    <div className="p-4 border border-black/10 flex items-center gap-4">
-                                        <Shield className="h-5 w-5 opacity-20" />
-                                        <div className="space-y-0.5">
-                                            <div className="text-[10px] font-black uppercase">Security Scan</div>
-                                            <div className="text-[8px] font-bold text-black/40 uppercase">Enable vulnerability mapping</div>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </FieldsetCard>
